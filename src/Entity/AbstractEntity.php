@@ -3,30 +3,24 @@
 namespace App\Entity;
 
 
-class Commande
-{
-    private \DateTime $date_creation;
 
+abstract class AbstractEntity
+{
     public function __construct(
-        private ?int $id,
-        private float $prix_final,
-        private bool $reduction_appliquee,
-        ?\DateTime $date_creation = null
+        protected ?int $id = null,
+        protected \DateTime $date_creation = new \DateTime()
     ) {
-        $this->date_creation = $date_creation ?? new \DateTime();
     }
 
     public function __call(string $name, array $arguments): mixed
     {
         if (str_starts_with($name, 'get')) {
-
             $property = lcfirst(substr($name, 3));
 
             return $this->$property;
         }
 
         if (str_starts_with($name, 'set')) {
-
             $property = lcfirst(substr($name, 3));
 
             $this->$property = $arguments[0];
