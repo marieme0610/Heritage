@@ -1,0 +1,20 @@
+{
+    "name": "marieme/new-projet",
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/",
+            "App\\Core\\": "src/Core",
+            "App\\Http\\": "src/Controller",
+            "App\\Model\\": "src/Repository",
+            "App\\Service\\": "src/Service",
+            "App\\Entity\\": "src/Entity"
+        }
+    },
+    "authors": [
+        {
+            "name": "mariemeNDG",
+            "email": "ndeyemariemesarrndong06@gmail.com"
+        }
+    ],
+    "require": {}
+}
