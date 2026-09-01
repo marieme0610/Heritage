@@ -7,105 +7,99 @@ namespace App\Core;
 use PDO;
 use PDOStatement;
 use PDOException;
+use Exception;
 use stdClass;
 
 class Database
 {
-    private static ?Database $instance = null;
-    private static PDO $pdo;
+    private PDO $pdo;
 
-    private function __construct()
+    public function __construct()
     {
         $dsn = "pgsql:host=localhost;port=5432;dbname=commandes";
 
         try {
-            self::$pdo = new PDO($dsn, "postgres", "passer123", [
+            $this->pdo = new PDO($dsn, "postgres", "passer123", [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ
             ]);
         } catch (PDOException $e) {
             $sqlitePath = dirname(__DIR__, 2) . "/schemaSql/erp.db";
-            self::$pdo = new PDO("sqlite:" . $sqlitePath, null, null, [
+            $this->pdo = new PDO("sqlite:" . $sqlitePath, null, null, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ
             ]);
-            self::$pdo->exec("PRAGMA foreign_keys = ON;");
+            
+            $this->pdo->exec("PRAGMA foreign_keys = ON;");
         }
     }
 
-    private static function getInstance(): Database
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
+    private function __clone(){}
 
-        return self::$instance;
+   
+    private function getConnexion(): PDO
+    {
+        return $this->pdo;
     }
 
-    private static function getConnexion(): PDO
+    public function query(string $sql, bool $single = true): array|false|stdClass
     {
-        self::getInstance();
-        return self::$pdo;
-    }
-
-    public static function query(string $sql, bool $single = true): array|false|stdClass
-    {
-        $stmt = self::getConnexion()->query($sql);
+        $stmt = $this->getConnexion()->query($sql);
         return $single ? $stmt->fetch() : $stmt->fetchAll();
     }
 
-    public static function prepare(string $sql, array $datas): PDOStatement
+    public function prepare(string $sql, array $datas): PDOStatement
     {
-        $stmt = self::getConnexion()->prepare($sql);
-        
+        $stmt = $this->getConnexion()->prepare($sql);
+
+        // Liaison explicite des types pour éviter le bug des booléens PostgreSQL
         foreach ($datas as $key => $value) {
-            // Déterminer le type PDO approprié
-            $type = match (true) {
-                is_bool($value) => PDO::PARAM_BOOL,
-                is_null($value) => PDO::PARAM_NULL,
-                is_int($value)  => PDO::PARAM_INT,
-                default         => PDO::PARAM_STR,
-            };
-
-            // Les index numérotés (?) commencent à 1 dans PDO, les paramètres nommés (:param) restent identiques
-            $parameter = is_int($key) ? $key + 1 : $key;
-
-            $stmt->bindValue($parameter, $value, $type);
+            $param = str_starts_with((string)$key, ':') ? $key : ':' . $key;
+            
+            if (is_bool($value)) {
+                $stmt->bindValue($param, $value, PDO::PARAM_BOOL);
+            } elseif (is_int($value)) {
+                $stmt->bindValue($param, $value, PDO::PARAM_INT);
+            } elseif (is_null($value)) {
+                $stmt->bindValue($param, $value, PDO::PARAM_NULL);
+            } else {
+                $stmt->bindValue($param, $value, PDO::PARAM_STR);
+            }
         }
 
         $stmt->execute();
         return $stmt;
     }
 
-    public static function executeQuery(string $sql, array $datas, bool $single = true): array|false|stdClass
+    public function executeQuery(string $sql, array $datas, bool $single = true): array|false|stdClass
     {
-        $stmt = self::prepare($sql, $datas);
+        $stmt = $this->prepare($sql, $datas);
         return $single ? $stmt->fetch() : $stmt->fetchAll();
     }
 
-    public static function executeUpdate(string $sql, array $datas): int
+    public function executeUpdate(string $sql, array $datas): int
     {
-        $stmt = self::prepare($sql, $datas);
+        $stmt = $this->prepare($sql, $datas);
 
         if (str_starts_with(strtoupper(trim($sql)), 'INSERT')) {
-            return (int) self::getConnexion()->lastInsertId();
+            return (int) $this->getConnexion()->lastInsertId();
         }
 
         return $stmt->rowCount();
     }
 
-    public static function beginTransaction(): bool
+    public function beginTransaction(): bool
     {
-        return self::getConnexion()->beginTransaction();
+        return $this->getConnexion()->beginTransaction();
     }
 
-    public static function commit(): bool
+    public function commit(): bool
     {
-        return self::getConnexion()->commit();
+        return $this->getConnexion()->commit();
     }
 
-    public static function rollBack(): bool
+    public function rollBack(): bool
     {
-        return self::getConnexion()->rollBack();
+        return $this->getConnexion()->rollBack();
     }
 }

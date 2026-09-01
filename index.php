@@ -2,15 +2,16 @@
 
 require "vendor/autoload.php";
 
-use App\DTO\CommandeDTO;
+use App\Http\CommandeController;
+use App\Core\Container;
 use App\Model\CommandeRepository;
+use App\Service\CommandeService;
 
-$commande = new CommandeDTO(
-    25000,
-    false
-);
 
-$cmdSave = new CommandeRepository();
+$container = new Container();
 
-$cmdSave->saveCommande($commande);
 
+$container->get(CommandeRepository::class);
+$container->get(CommandeService::class);
+$controller = $container->get(CommandeController::class);
+$controller->showFormulaire();

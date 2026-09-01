@@ -1,25 +1,27 @@
 <?php
 
 namespace App\Model;
-use App\DTO\CommandeDTO;
-use App\Core\Database;
 
-class CommandeRepository
+use App\Core\Database;
+use App\Entity\Commande;
+
+class CommandeRepository 
 {
-    public function saveCommande(CommandeDTO $commande): int
+    public function __construct(
+       private Database $db
+    ){}
+    public function saveCommande(Commande $commande)
     {
         $params = [
-            'prix_final'=> $commande->prix_final,
-            'reduction_appliquee'=> $commande->reduction_appliquee
+            'prix_final' => $commande->getPrix_final(),
+            'reduction_appliquee' => $commande->getReduction_appliquee()
         ];
-        $sql = "INSERT INTO commandes(
-                prix_final,reduction_appliquee
-                )
-                VALUES(:prix_final,:reduction_appliquee);";
-    
-    $query = Database::executeUpdate($sql,$params);
-    return $query;
+        
+        $sql = "INSERT INTO commandes (prix_final, reduction_appliquee)
+                VALUES (:prix_final, :reduction_appliquee)";
+
+        $res = $this->db->executeQuery($sql, $params, true);
+
+        return $res->id ?? null;
     }
-
-
 }
